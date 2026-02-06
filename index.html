@@ -3,104 +3,409 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جزيرة إيدن | Eden Island</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+    <title>جزيرة إيدن السحرية</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        body {
+            background: #0a1929;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* شاشة الدخول */
+        #login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a1929, #1a472a, #2c003e);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .login-container {
+            background: rgba(0, 10, 20, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #4CAF50;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 0 50px rgba(76, 175, 80, 0.5),
+                        inset 0 0 20px rgba(76, 175, 80, 0.3);
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .login-title {
+            color: #4CAF50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #4CAF50;
+        }
+        
+        .login-subtitle {
+            color: #87CEEB;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+        
+        #password {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        #password:focus {
+            outline: none;
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            transform: scale(1.02);
+        }
+        
+        #enter-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        
+        #enter-btn:hover {
+            background: linear-gradient(45deg, #45a049, #4CAF50);
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(76, 175, 80, 0.7);
+        }
+        
+        #enter-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .password-hint {
+            color: #888;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .password-hint strong {
+            color: #FFD700;
+            animation: float 3s ease-in-out infinite;
+            display: inline-block;
+        }
+        
+        /* شاشة اللعبة */
+        #game-screen {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+        
+        /* رسائل الخطأ */
+        .error-message {
+            color: #ff4444;
+            background: rgba(255, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            animation: fadeIn 0.3s;
+            border: 1px solid #ff4444;
+        }
+        
+        /* عناصر الزينة */
+        .floating-island {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #4CAF50, transparent 70%);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        .floating-island:nth-child(1) {
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+        
+        .floating-island:nth-child(2) {
+            top: 60%;
+            right: 15%;
+            animation-delay: 1s;
+            width: 150px;
+            height: 150px;
+        }
+        
+        .floating-island:nth-child(3) {
+            bottom: 20%;
+            left: 20%;
+            animation-delay: 2s;
+            width: 80px;
+            height: 80px;
+        }
+    </style>
 </head>
 <body>
     <!-- شاشة الدخول -->
-    <div id="login-screen" class="screen">
+    <div id="login-screen">
+        <div class="floating-island"></div>
+        <div class="floating-island"></div>
+        <div class="floating-island"></div>
+        
         <div class="login-container">
-            <h1>🌴 جزيرة إيدن</h1>
-            <p class="subtitle">مكان لا توجد فيه إجابات سهلة</p>
+            <h1 class="login-title">🏝️ جزيرة إيدن السحرية</h1>
+            <p class="login-subtitle">العالم الخيالي ينتظر اكتشافك</p>
             
-            <div class="password-input">
-                <input type="password" id="password" placeholder="كلمة المرور السرية..." autocomplete="off">
-                <button id="enter-btn">الدخول إلى الجزيرة</button>
-            </div>
+            <input type="password" id="password" placeholder="أكتب كلمة السر هنا..." autocomplete="off">
             
-            <p class="hint">(جرب كلمة: "بداية")</p>
+            <button id="enter-btn">
+                🚀 ابدأ المغامرة
+            </button>
             
-            <!-- رابط الأدمن المخفي -->
-            <a href="#" id="admin-link" class="hidden-admin">.</a>
+            <p class="password-hint">
+                تلميح: الكلمة هي <strong>"بداية"</strong>
+            </p>
+            
+            <div id="error-message" class="error-message hidden"></div>
         </div>
     </div>
 
-    <!-- شاشة الأدمن -->
-    <div id="admin-screen" class="screen hidden">
-        <div class="admin-panel">
-            <h2>🛠️ لوحة التحكم السرية</h2>
-            <input type="password" id="admin-password" placeholder="كلمة أدمن..." class="admin-input">
-            <button id="admin-login">الدخول</button>
-        </div>
-    </div>
-
-    <!-- شاشة اللعبة الرئيسية -->
-    <div id="game-screen" class="screen hidden">
-        <!-- واجهة اللعبة -->
+    <!-- شاشة اللعبة -->
+    <div id="game-screen" class="hidden">
         <canvas id="game-canvas"></canvas>
-        
-        <!-- عناصر الواجهة -->
-        <div id="hud">
-            <div class="hud-item time">⏰ <span id="time-display">06:00</span></div>
-            <div class="hud-item health">❤️ <span id="health-display">100</span></div>
-            <div class="hud-item trust">🌿 <span id="trust-display">50</span></div>
-        </div>
-        
-        <!-- رسائل تفاعلية -->
-        <div id="message-box" class="hidden">
-            <p id="message-text"></p>
-        </div>
-        
-        <!-- قائمة الأدوات -->
-        <div id="toolbar" class="hidden">
-            <button class="tool-btn" data-tool="hand">✋</button>
-            <button class="tool-btn" data-tool="axe">🪓</button>
-            <button class="tool-btn" data-tool="medkit">🧰</button>
-        </div>
     </div>
 
-    <!-- لوحة الأدمن بعد الدخول -->
-    <div id="admin-panel" class="hidden">
-        <div class="admin-controls">
-            <h3>👁️ لوحة المراقبة</h3>
-            <div class="control-group">
-                <label>الوقت: <input type="range" id="time-slider" min="0" max="23" value="6"></label>
-                <label>المزاج: 
-                    <select id="mood-select">
-                        <option value="calm">هادئ</option>
-                        <option value="tense">متوتر</option>
-                        <option value="ominous">مخيف</option>
-                    </select>
-                </label>
-            </div>
-            <div class="control-group">
-                <button id="spawn-lion">إظهار أسد</button>
-                <button id="spawn-police">إظهار شرطة</button>
-                <button id="toggle-rain">تفعيل المطر</button>
-            </div>
-            <div class="player-stats">
-                <h4>إحصائيات اللاعب:</h4>
-                <p id="stats-display">جار التحميل...</p>
-            </div>
-            <button id="close-admin">إغلاق</button>
-        </div>
-    </div>
-
-    <!-- الأصوات -->
-    <audio id="bg-music" loop>
-        <source src="assets/sounds/ambient.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="wind-sound" loop>
-        <source src="assets/sounds/wind.mp3" type="audio/mpeg">
-    </audio>
-
-    <!-- المكتبات -->
-    <script src="https://cdn.jsdelivr.net/npm/kaboom@3000.1.9/dist/kaboom.js"></script>
-    <script src="game.js"></script>
-    <script src="modules/player.js"></script>
-    <script src="modules/island.js"></script>
-    <script src="modules/ai-director.js"></script>
-    <script src="modules/animals.js"></script>
+    <script>
+        // ==================== نظام الدخول ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎮 نظام جزيرة إيدن جاهز');
+            
+            // عناصر DOM
+            const loginScreen = document.getElementById('login-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const passwordInput = document.getElementById('password');
+            const enterBtn = document.getElementById('enter-btn');
+            const errorMessage = document.getElementById('error-message');
+            
+            // كلمة السر الصحيحة
+            const CORRECT_PASSWORD = 'بداية';
+            
+            // حدث النقر على زر الدخول
+            enterBtn.addEventListener('click', handleLogin);
+            
+            // حدث الضغط على Enter في حقل الكتابة
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleLogin();
+                }
+            });
+            
+            // تركيز تلقائي على حقل الكتابة
+            passwordInput.focus();
+            
+            // دالة معالجة الدخول
+            function handleLogin() {
+                const enteredPassword = passwordInput.value.trim();
+                
+                // مسح الرسائل القديمة
+                errorMessage.classList.add('hidden');
+                passwordInput.style.borderColor = '#4CAF50';
+                
+                // التحقق من كلمة السر
+                if (enteredPassword === CORRECT_PASSWORD) {
+                    console.log('✅ دخول ناجح!');
+                    
+                    // تأثير الانتقال
+                    loginScreen.style.opacity = '0';
+                    loginScreen.style.transition = 'opacity 0.8s ease';
+                    
+                    setTimeout(() => {
+                        loginScreen.classList.add('hidden');
+                        gameScreen.classList.remove('hidden');
+                        
+                        // بدء اللعبة
+                        startGame();
+                    }, 800);
+                    
+                } else {
+                    console.log('❌ كلمة السر خاطئة');
+                    
+                    // تأثير الخطأ
+                    passwordInput.style.borderColor = '#ff4444';
+                    passwordInput.style.animation = 'shake 0.5s';
+                    
+                    // رسالة الخطأ
+                    errorMessage.textContent = 'كلمة السر خاطئة! حاول مرة أخرى.';
+                    errorMessage.classList.remove('hidden');
+                    
+                    // إفراغ الحقل
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    
+                    // إزالة تأثير الهز
+                    setTimeout(() => {
+                        passwordInput.style.animation = '';
+                    }, 500);
+                }
+            }
+            
+            // دالة بدء اللعبة
+            function startGame() {
+                console.log('🎮 بدء اللعبة...');
+                
+                // هنا يمكنك وضع كود اللعبة الخاص بك
+                // أو استدعاء ملف game.js
+                
+                // مثال بسيط:
+                const canvas = document.getElementById('game-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                
+                // رسالة ترحيب في اللعبة
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#4CAF50';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('مرحباً في جزيرة إيدن!', canvas.width/2, canvas.height/2);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = '24px Arial';
+                ctx.fillText('استخدم الأسهم للحركة', canvas.width/2, canvas.height/2 + 50);
+                ctx.fillText('R لركوب الحصان | T للنوم | E للتفاعل', canvas.width/2, canvas.height/2 + 100);
+                
+                // يمكنك وضع كود اللعبة الكامل هنا
+                // أو تحميل ملف game.js
+                loadGameScript();
+            }
+            
+            // تحميل كود اللعبة
+            function loadGameScript() {
+                // هنا يمكنك تحميل ملف game.js الخارجي
+                // أو وضع الكود مباشرة
+                
+                console.log('📦 جار تحميل اللعبة...');
+                
+                // مثال: بدء لعبة بسيطة
+                setTimeout(() => {
+                    const canvas = document.getElementById('game-canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // مسح الشاشة
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // رسم عالم بسيط
+                    drawSimpleWorld(ctx, canvas);
+                    
+                    console.log('✅ اللعبة جاهزة للعب!');
+                }, 1000);
+            }
+            
+            // رسم عالم بسيط للاختبار
+            function drawSimpleWorld(ctx, canvas) {
+                // السماء
+                const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                skyGradient.addColorStop(0, '#87CEEB');
+                skyGradient.addColorStop(1, '#E0F7FF');
+                ctx.fillStyle = skyGradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // الشمس
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(100, 100, 40, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // جزيرة
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.ellipse(canvas.width/2, canvas.height/2 + 100, 300, 200, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // عشب
+                ctx.fillStyle = '#32CD32';
+                ctx.beginPath();
+                ctx.ellipse(canvas.width/2, canvas.height/2 + 100, 280, 180, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // بيت
+                ctx.fillStyle = '#D2691E';
+                ctx.fillRect(canvas.width/2 - 150, canvas.height/2 - 50, 100, 80);
+                
+                // نص تعليمات
+                ctx.fillStyle = 'black';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🏝️ جزيرة إيدن السحرية', canvas.width/2, 50);
+                ctx.fillText('استمتع بالمغامرة!', canvas.width/2, 80);
+            }
+            
+            // رسالة تحميل ناجح
+            console.log('✅ نظام الدخول جاهز بنجاح');
+            console.log('🔑 كلمة السر: "بداية"');
+        });
+    </script>
 </body>
 </html>
