@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جزيرة إيدن | Eden Island</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+</head>
+<body>
+    <!-- شاشة الدخول -->
+    <div id="login-screen" class="screen">
+        <div class="login-container">
+            <h1>🌴 جزيرة إيدن</h1>
+            <p class="subtitle">مكان لا توجد فيه إجابات سهلة</p>
+            
+            <div class="password-input">
+                <input type="password" id="password" placeholder="كلمة المرور السرية..." autocomplete="off">
+                <button id="enter-btn">الدخول إلى الجزيرة</button>
+            </div>
+            
+            <p class="hint">(جرب كلمة: "بداية")</p>
+            
+            <!-- رابط الأدمن المخفي -->
+            <a href="#" id="admin-link" class="hidden-admin">.</a>
+        </div>
+    </div>
+
+    <!-- شاشة الأدمن -->
+    <div id="admin-screen" class="screen hidden">
+        <div class="admin-panel">
+            <h2>🛠️ لوحة التحكم السرية</h2>
+            <input type="password" id="admin-password" placeholder="كلمة أدمن..." class="admin-input">
+            <button id="admin-login">الدخول</button>
+        </div>
+    </div>
+
+    <!-- شاشة اللعبة الرئيسية -->
+    <div id="game-screen" class="screen hidden">
+        <!-- واجهة اللعبة -->
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- عناصر الواجهة -->
+        <div id="hud">
+            <div class="hud-item time">⏰ <span id="time-display">06:00</span></div>
+            <div class="hud-item health">❤️ <span id="health-display">100</span></div>
+            <div class="hud-item trust">🌿 <span id="trust-display">50</span></div>
+        </div>
+        
+        <!-- رسائل تفاعلية -->
+        <div id="message-box" class="hidden">
+            <p id="message-text"></p>
+        </div>
+        
+        <!-- قائمة الأدوات -->
+        <div id="toolbar" class="hidden">
+            <button class="tool-btn" data-tool="hand">✋</button>
+            <button class="tool-btn" data-tool="axe">🪓</button>
+            <button class="tool-btn" data-tool="medkit">🧰</button>
+        </div>
+    </div>
+
+    <!-- لوحة الأدمن بعد الدخول -->
+    <div id="admin-panel" class="hidden">
+        <div class="admin-controls">
+            <h3>👁️ لوحة المراقبة</h3>
+            <div class="control-group">
+                <label>الوقت: <input type="range" id="time-slider" min="0" max="23" value="6"></label>
+                <label>المزاج: 
+                    <select id="mood-select">
+                        <option value="calm">هادئ</option>
+                        <option value="tense">متوتر</option>
+                        <option value="ominous">مخيف</option>
+                    </select>
+                </label>
+            </div>
+            <div class="control-group">
+                <button id="spawn-lion">إظهار أسد</button>
+                <button id="spawn-police">إظهار شرطة</button>
+                <button id="toggle-rain">تفعيل المطر</button>
+            </div>
+            <div class="player-stats">
+                <h4>إحصائيات اللاعب:</h4>
+                <p id="stats-display">جار التحميل...</p>
+            </div>
+            <button id="close-admin">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- الأصوات -->
+    <audio id="bg-music" loop>
+        <source src="assets/sounds/ambient.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="wind-sound" loop>
+        <source src="assets/sounds/wind.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- المكتبات -->
+    <script src="https://cdn.jsdelivr.net/npm/kaboom@3000.1.9/dist/kaboom.js"></script>
+    <script src="game.js"></script>
+    <script src="modules/player.js"></script>
+    <script src="modules/island.js"></script>
+    <script src="modules/ai-director.js"></script>
+    <script src="modules/animals.js"></script>
+</body>
+</html>
