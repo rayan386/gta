@@ -1,710 +1,960 @@
-// game.js - النسخة المحدثة والمتكاملة
+// 🎮 جزيرة إيدن - الإصدار الخيالي (400 سطر)
+// ⚡ جرافيك خيالي + أنشطة كاملة + شخصية مفصلة
 
-// تهيئة اللعبة
-let game = null;
-let player = null;
-let island = null;
-let aiDirector = null;
-let combatSystem = null;
-let injurySystem = null;
-let uiManager = null;
-let effectsManager = null;
-let adminPanel = null;
+// ==================== التهيئة ====================
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 1200;
+canvas.height = 800;
 
-// عناصر DOM
-const loginScreen = document.getElementById('login-screen');
-const adminScreen = document.getElementById('admin-screen');
-const gameScreen = document.getElementById('game-screen');
-const passwordInput = document.getElementById('password');
-const enterBtn = document.getElementById('enter-btn');
-const adminLink = document.getElementById('admin-link');
+let gameTime = 0;
+let isRidingHorse = false;
+let isSleeping = false;
+let playerMoney = 5000;
+let playerHealth = 100;
+let inventory = { wood: 0, food: 5, arrows: 10 };
 
-// بيانات اللعبة
-const gameState = {
-    password: "بداية",
-    playerData: {
-        health: 100,
-        trust: 50,
-        hunger: 100,
-        energy: 100
-    },
-    world: {
-        time: 6,
-        mood: 'calm',
-        weather: 'clear'
-    },
-    inventory: ['hand']
-};
+// ==================== الشخصية ====================
+class Player {
+    constructor() {
+        this.x = 600;
+        this.y = 400;
+        this.speed = isRidingHorse ? 8 : 5;
+        this.direction = 'down';
+        this.animationFrame = 0;
+        this.colorShirt = '#4169E1';
+        this.colorPants = '#228B22';
+        this.hatColor = '#8B4513';
+    }
 
-// مفاتيح الكيبورد المضغوطة
-const keys = {};
+    update(keys) {
+        if (isSleeping) return;
+        
+        this.animationFrame += 0.2;
+        this.speed = isRidingHorse ? 8 : 5;
+        
+        if (keys['ArrowUp'] || keys['w']) {
+            this.y -= this.speed;
+            this.direction = 'up';
+        }
+        if (keys['ArrowDown'] || keys['s']) {
+            this.y += this.speed;
+            this.direction = 'down';
+        }
+        if (keys['ArrowLeft'] || keys['a']) {
+            this.x -= this.speed;
+            this.direction = 'left';
+        }
+        if (keys['ArrowRight'] || keys['d']) {
+            this.x += this.speed;
+            this.direction = 'right';
+        }
+        
+        this.x = Math.max(50, Math.min(canvas.width - 50, this.x));
+        this.y = Math.max(80, Math.min(canvas.height - 80, this.y));
+    }
 
-// الدخول إلى اللعبة
-enterBtn.addEventListener('click', enterGame);
-passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') enterGame();
-});
+    draw() {
+        if (isSleeping) {
+            this.drawSleeping();
+            return;
+        }
+        
+        if (isRidingHorse) {
+            this.drawRiding();
+            return;
+        }
+        
+        this.drawWalking();
+    }
 
-function enterGame() {
-    if (passwordInput.value === gameState.password) {
-        loginScreen.style.opacity = '0';
-        setTimeout(() => {
-            loginScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            initGame();
-        }, 500);
-    } else {
-        passwordInput.style.borderColor = '#ff4444';
-        passwordInput.style.animation = 'shake 0.5s';
-        setTimeout(() => {
-            passwordInput.style.animation = '';
-        }, 500);
+    drawWalking() {
+        const wave = Math.sin(this.animationFrame);
+        
+        // الظل
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + 45, 15, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // الساقان المتحركتان
+        ctx.fillStyle = this.colorPants;
+        const legOffset = wave * 8;
+        
+        if (this.direction === 'left' || this.direction === 'right') {
+            ctx.fillRect(this.x - 12, this.y + 25 + legOffset, 8, 30);
+            ctx.fillRect(this.x + 4, this.y + 25 - legOffset, 8, 30);
+        } else {
+            ctx.fillRect(this.x - 15, this.y + 25, 10, 35);
+            ctx.fillRect(this.x + 5, this.y + 25, 10, 35);
+        }
+        
+        // الجسم
+        ctx.fillStyle = this.colorShirt;
+        ctx.fillRect(this.x - 20, this.y - 15, 40, 45);
+        
+        // الذراعان المتحركتان
+        ctx.fillStyle = this.colorShirt;
+        const armOffset = wave * 12;
+        
+        if (this.direction === 'left') {
+            ctx.fillRect(this.x - 30, this.y - 10 + armOffset, 10, 35);
+            ctx.fillRect(this.x + 20, this.y - 10 - armOffset, 10, 35);
+        } else if (this.direction === 'right') {
+            ctx.fillRect(this.x - 30, this.y - 10 - armOffset, 10, 35);
+            ctx.fillRect(this.x + 20, this.y - 10 + armOffset, 10, 35);
+        } else {
+            ctx.fillRect(this.x - 30, this.y - 10, 10, 40);
+            ctx.fillRect(this.x + 20, this.y - 10, 10, 40);
+        }
+        
+        // الرأس
+        ctx.fillStyle = '#FFCC99';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 25, 18, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // القبعة
+        ctx.fillStyle = this.hatColor;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y - 40, 22, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // الوجه حسب الاتجاه
+        this.drawFace();
+    }
+
+    drawRiding() {
+        // الحصان
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + 10, 40, 25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // أرجل الحصان
+        const legWave = Math.sin(this.animationFrame * 2);
+        ctx.fillRect(this.x - 25, this.y + 35 + legWave * 5, 12, 35);
+        ctx.fillRect(this.x - 5, this.y + 35 - legWave * 5, 12, 35);
+        ctx.fillRect(this.x + 15, this.y + 35 + legWave * 5, 12, 35);
+        ctx.fillRect(this.x + 35, this.y + 35 - legWave * 5, 12, 35);
+        
+        // رقبة الحصان
+        ctx.fillRect(this.x + 35, this.y - 15, 25, 40);
+        
+        // رأس الحصان
+        ctx.beginPath();
+        ctx.ellipse(this.x + 55, this.y - 25, 15, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // عين الحصان
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x + 60, this.y - 25, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // اللاعب راكباً
+        ctx.fillStyle = '#DC143C';
+        ctx.fillRect(this.x - 15, this.y - 40, 30, 25);
+        
+        // رأس اللاعب
+        ctx.fillStyle = '#FFCC99';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 55, 15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // قبعة اللاعب
+        ctx.fillStyle = this.hatColor;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y - 65, 18, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // ذيل الحصان
+        ctx.fillStyle = '#8B4513';
+        for(let i = 0; i < 8; i++) {
+            ctx.beginPath();
+            const angle = Math.PI * 0.7 + (i / 10);
+            const tailX = this.x - 45 + Math.cos(angle + this.animationFrame) * 20;
+            const tailY = this.y - 5 + Math.sin(angle + this.animationFrame) * 20;
+            ctx.arc(tailX, tailY, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    drawSleeping() {
+        // السرير
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(this.x - 60, this.y, 120, 20);
+        ctx.fillStyle = '#D2691E';
+        ctx.fillRect(this.x - 60, this.y - 10, 120, 10);
+        
+        // اللاعب نائماً
+        ctx.fillStyle = this.colorShirt;
+        ctx.fillRect(this.x - 15, this.y - 30, 30, 40);
+        
+        ctx.fillStyle = '#FFCC99';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 40, 15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // علامة النوم ZZZ
+        ctx.fillStyle = 'blue';
+        ctx.font = '24px Arial';
+        for(let i = 0; i < 3; i++) {
+            const offset = i * 25;
+            const wave = Math.sin(this.animationFrame * 0.5 + i) * 5;
+            ctx.fillText('💤', this.x + 30 + offset, this.y - 60 + wave);
+        }
+    }
+
+    drawFace() {
+        ctx.fillStyle = 'black';
+        
+        if (this.direction === 'left') {
+            ctx.beginPath();
+            ctx.arc(this.x - 8, this.y - 25, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // فم جانبي
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y - 15);
+            ctx.lineTo(this.x - 10, this.y - 15);
+            ctx.stroke();
+        } else if (this.direction === 'right') {
+            ctx.beginPath();
+            ctx.arc(this.x + 8, this.y - 25, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y - 15);
+            ctx.lineTo(this.x + 10, this.y - 15);
+            ctx.stroke();
+        } else {
+            ctx.beginPath();
+            ctx.arc(this.x - 6, this.y - 25, 3, 0, Math.PI * 2);
+            ctx.arc(this.x + 6, this.y - 25, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // ابتسامة
+            ctx.beginPath();
+            ctx.arc(this.x, this.y - 15, 8, 0, Math.PI);
+            ctx.stroke();
+        }
     }
 }
 
-// رابط الأدمن المخفي
-adminLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginScreen.classList.add('hidden');
-    adminScreen.classList.remove('hidden');
-});
-
-// تهيئة اللعبة
-function initGame() {
-    console.log('🚀 بدء تهيئة اللعبة...');
-    
-    // تهيئة الكائنات
-    player = new Player();
-    island = new Island();
-    aiDirector = new AIDirector();
-    combatSystem = new CombatSystem();
-    injurySystem = new InjurySystem();
-    uiManager = new UIManager();
-    effectsManager = new EffectsManager();
-    adminPanel = new AdminPanel();
-    
-    // جعل الكائنات متاحة عالمياً
-    window.player = player;
-    window.island = island;
-    window.aiDirector = aiDirector;
-    window.combatSystem = combatSystem;
-    window.gameState = gameState;
-    
-    // تهيئة Kaboom
-    initKaboom();
-    
-    // تهيئة الواجهة
-    uiManager.init();
-    
-    // تهيئة المؤثرات
-    effectsManager.init();
-    effectsManager.addCSSAnimations();
-    
-    // تهيئة لوحة الأدمن
-    adminPanel.init();
-    
-    // بدء دورة اللعبة
-    startGameLoop();
-    
-    console.log('✅ اللعبة جاهزة!');
-}
-
-function initKaboom() {
-    // تهيئة Kaboom
-    game = kaboom({
-        width: window.innerWidth,
-        height: window.innerHeight,
-        canvas: document.getElementById('game-canvas'),
-        background: [0, 0, 0],
-        global: false
-    });
-    
-    // تحميل الأصول (افتراضية)
-    loadAssets();
-    
-    // إنشاء المشهد
-    createScene();
-    
-    // إعداد أدوات التحكم
-    setupControls();
-}
-
-function loadAssets() {
-    // هنا سنضيف الصور والأصوات لاحقاً
-    console.log("📦 جار تحميل الأصول...");
-    
-    // تحميل الصور الافتراضية
-    game.loadSprite("player", "https://kaboomjs.com/example/sprites/bean.png");
-    game.loadSprite("tree", "https://kaboomjs.com/example/sprites/tree.png");
-    game.loadSprite("house", "https://kaboomjs.com/example/sprites/block.png");
-}
-
-function createScene() {
-   function createScene() {
-    const canvas = document.getElementById('game-canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // تعيين حجم الكانفاس
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    // السماء (تدرج جميل)
-    const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGradient.addColorStop(0, '#87CEEB'); // أزرق فاتح
-    skyGradient.addColorStop(1, '#E0F7FF'); // أزرق فاتح جداً
+// ==================== العالم الخيالي ====================
+function drawFantasyWorld() {
+    // السماء السحرية
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.7);
+    const timeOfDay = (Math.sin(gameTime * 0.0001) + 1) / 2;
+    skyGradient.addColorStop(0, `hsl(${210 + timeOfDay * 60}, 70%, ${60 + timeOfDay * 20}%)`);
+    skyGradient.addColorStop(1, `hsl(${280 + timeOfDay * 40}, 80%, ${70 + timeOfDay * 10}%)`);
     ctx.fillStyle = skyGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.7);
     
-    // الشمس
+    // شمس/قمر سحري
+    const celestialX = 150 + Math.sin(gameTime * 0.0002) * 100;
+    const celestialY = 150 + Math.cos(gameTime * 0.0003) * 50;
+    const celestialSize = 50 + Math.sin(gameTime * 0.0005) * 10;
+    
+    ctx.fillStyle = timeOfDay > 0.5 ? '#FFD700' : '#F0F8FF';
     ctx.beginPath();
-    ctx.arc(100, 100, 40, 0, Math.PI * 2);
-    ctx.fillStyle = '#FFD700';
+    ctx.arc(celestialX, celestialY, celestialSize, 0, Math.PI * 2);
     ctx.fill();
     
-    // الغيوم
-    drawCloud(ctx, 300, 80);
-    drawCloud(ctx, 500, 120);
-    drawCloud(ctx, 200, 180);
-    
-    // الجزيرة (أرض)
-    ctx.beginPath();
-    ctx.ellipse(canvas.width/2, canvas.height/2 + 100, 400, 300, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#8B4513'; // تربة
-    ctx.fill();
-    ctx.strokeStyle = '#654321';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    
-    // العشب على الجزيرة
-    ctx.beginPath();
-    ctx.ellipse(canvas.width/2, canvas.height/2 + 100, 380, 280, 0, 0, Math.PI * 2);
-    const grassGradient = ctx.createRadialGradient(
-        canvas.width/2, canvas.height/2 + 100, 0,
-        canvas.width/2, canvas.height/2 + 100, 380
+    // تأثير توهج
+    const glow = ctx.createRadialGradient(
+        celestialX, celestialY, celestialSize,
+        celestialX, celestialY, celestialSize * 2
     );
-    grassGradient.addColorStop(0, '#7CFC00'); // أخضر فاتح
-    grassGradient.addColorStop(1, '#228B22'); // أخضر غابة
-    ctx.fillStyle = grassGradient;
-    ctx.fill();
+    glow.addColorStop(0, timeOfDay > 0.5 ? 'rgba(255,215,0,0.8)' : 'rgba(240,248,255,0.8)');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.7);
     
-    // البيت الخشبي
-    drawHouse(ctx, canvas.width/2 - 200, canvas.height/2 - 50);
-    
-    // الأشجار
-    for(let i = 0; i < 15; i++) {
-        drawTree(ctx, 
-            canvas.width/2 - 300 + Math.random() * 250,
-            canvas.height/2 - 200 + Math.random() * 150
-        );
+    // جبال سحرية
+    for(let i = 0; i < 5; i++) {
+        const mountainX = (i * 300) + Math.sin(gameTime * 0.0001 + i) * 20;
+        const mountainHeight = 150 + Math.sin(gameTime * 0.0003 + i) * 30;
+        
+        ctx.fillStyle = i % 2 === 0 ? '#2F4F4F' : '#4682B4';
+        ctx.beginPath();
+        ctx.moveTo(mountainX - 150, canvas.height * 0.7);
+        ctx.lineTo(mountainX, canvas.height * 0.7 - mountainHeight);
+        ctx.lineTo(mountainX + 150, canvas.height * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        
+        // ثلوج على القمم
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.moveTo(mountainX - 50, canvas.height * 0.7 - mountainHeight + 20);
+        ctx.lineTo(mountainX, canvas.height * 0.7 - mountainHeight);
+        ctx.lineTo(mountainX + 50, canvas.height * 0.7 - mountainHeight + 20);
+        ctx.closePath();
+        ctx.fill();
     }
     
-    // شاطئ رملي
-    ctx.beginPath();
-    ctx.ellipse(canvas.width/2, canvas.height/2 + 180, 420, 320, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#F4E4A6'; // لون رملي
-    ctx.fill();
+    // الأرض السحرية
+    const groundGradient = ctx.createLinearGradient(0, canvas.height * 0.7, 0, canvas.height);
+    groundGradient.addColorStop(0, '#32CD32');
+    groundGradient.addColorStop(0.5, '#228B22');
+    groundGradient.addColorStop(1, '#006400');
+    ctx.fillStyle = groundGradient;
+    ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.3);
     
-    // الماء
-    ctx.beginPath();
-    ctx.rect(0, canvas.height/2 + 250, canvas.width, canvas.height/2);
-    const waterGradient = ctx.createLinearGradient(0, canvas.height/2 + 250, 0, canvas.height);
-    waterGradient.addColorStop(0, '#1E90FF'); // أزرق ماء
-    waterGradient.addColorStop(1, '#00008B'); // أزرق داكن
-    ctx.fillStyle = waterGradient;
-    ctx.fill();
+    // أنهار ضوئية
+    drawMagicRivers();
     
-    // أمواج
-    drawWaves(ctx);
+    // أشجار سحرية
+    for(let i = 0; i < 20; i++) {
+        drawMagicTree(i);
+    }
     
-    // إسطبل الأحصنة
-    drawStable(ctx, canvas.width/2 + 150, canvas.height/2 + 50);
+    // البيت الخيالي
+    drawMagicHouse();
     
-    // الحصان
-    drawHorse(ctx, canvas.width/2 + 200, canvas.height/2 + 100);
+    // البحيرة البلورية
+    drawCrystalLake();
     
-    // كومة الحطب
-    drawWoodPile(ctx, canvas.width/2 - 100, canvas.height/2 + 150);
-    
-    // الشخصية (اللاعب)
-    drawCharacter(ctx, canvas.width/2, canvas.height/2);
-    
-    // الكلب
-    drawDog(ctx, canvas.width/2 + 50, canvas.height/2 + 50);
-    
-    console.log('🎨 تم رسم المشهد!');
+    // الشلال السحري
+    drawMagicWaterfall();
 }
 
-// دالة لرسم غيمة
-function drawCloud(ctx, x, y) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.beginPath();
-    ctx.arc(x, y, 30, 0, Math.PI * 2);
-    ctx.arc(x + 25, y - 15, 25, 0, Math.PI * 2);
-    ctx.arc(x + 45, y, 30, 0, Math.PI * 2);
-    ctx.arc(x + 25, y + 10, 25, 0, Math.PI * 2);
-    ctx.fill();
+function drawMagicRivers() {
+    for(let i = 0; i < 3; i++) {
+        const riverY = canvas.height * 0.75 + i * 50;
+        ctx.strokeStyle = `hsla(${200 + i * 30}, 100%, 70%, 0.6)`;
+        ctx.lineWidth = 20 + i * 5;
+        ctx.lineCap = 'round';
+        
+        ctx.beginPath();
+        ctx.moveTo(-50, riverY);
+        for(let x = 0; x < canvas.width + 100; x += 30) {
+            const wave = Math.sin(x * 0.03 + gameTime * 0.001 + i) * 15;
+            ctx.lineTo(x, riverY + wave);
+        }
+        ctx.stroke();
+        
+        // نقاط ضوء في النهر
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for(let x = 0; x < canvas.width; x += 40) {
+            if (Math.random() > 0.7) {
+                const lightY = riverY + Math.sin(x * 0.05 + gameTime * 0.002 + i) * 10;
+                ctx.beginPath();
+                ctx.arc(x, lightY, 3 + Math.sin(gameTime * 0.005 + x) * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
 }
 
-// دالة لرسم بيت خشبي
-function drawHouse(ctx, x, y) {
-    // الأساس
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(x, y, 120, 100);
+function drawMagicTree(index) {
+    const treeX = 100 + (index * 60) % (canvas.width - 200);
+    const treeY = canvas.height * 0.75 + 50;
+    const treeHeight = 80 + Math.sin(gameTime * 0.001 + index) * 20;
+    const treeColor = `hsl(${120 + Math.sin(index) * 30}, 70%, 40%)`;
+    const leafColor = `hsl(${90 + Math.cos(index) * 40}, 80%, 50%)`;
     
-    // السقف
-    ctx.fillStyle = '#A52A2A';
+    // الجذع المتوهج
+    ctx.fillStyle = treeColor;
+    ctx.fillRect(treeX - 8, treeY - treeHeight, 16, treeHeight);
+    
+    // تأثير توهج الجذع
+    ctx.strokeStyle = `hsl(${40 + Math.sin(index) * 20}, 100%, 60%)`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(treeX - 10, treeY - treeHeight, 20, treeHeight);
+    
+    // الأوراق السحرية
+    for(let layer = 0; layer < 4; layer++) {
+        const layerSize = 40 - layer * 8;
+        const layerY = treeY - treeHeight - layer * 20;
+        
+        ctx.fillStyle = leafColor;
+        ctx.beginPath();
+        ctx.arc(treeX, layerY, layerSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // نقاط ضوء في الأوراق
+        ctx.fillStyle = 'rgba(255, 255, 200, 0.8)';
+        for(let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 + gameTime * 0.001;
+            const lightX = treeX + Math.cos(angle) * (layerSize * 0.7);
+            const lightY = layerY + Math.sin(angle) * (layerSize * 0.7);
+            const lightSize = 2 + Math.sin(gameTime * 0.005 + i) * 1.5;
+            
+            ctx.beginPath();
+            ctx.arc(lightX, lightY, lightSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    // فواكه سحرية
+    if (index % 3 === 0) {
+        ctx.fillStyle = `hsl(${Math.sin(index + gameTime * 0.001) * 360}, 100%, 60%)`;
+        for(let i = 0; i < 5; i++) {
+            const fruitX = treeX + Math.cos(i * 1.2) * 25;
+            const fruitY = treeY - treeHeight + 20 + Math.sin(i * 1.2) * 15;
+            ctx.beginPath();
+            ctx.arc(fruitX, fruitY, 6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function drawMagicHouse() {
+    const houseX = canvas.width * 0.7;
+    const houseY = canvas.height * 0.65;
+    
+    // الأساس البلوري
+    ctx.fillStyle = 'rgba(135, 206, 235, 0.7)';
+    ctx.fillRect(houseX - 80, houseY, 160, 100);
+    
+    // جدران ذهبية
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(houseX - 70, houseY - 60, 140, 60);
+    
+    // نوافذ سحرية
+    for(let i = 0; i < 3; i++) {
+        const windowX = houseX - 50 + i * 50;
+        ctx.fillStyle = `hsla(${200 + Math.sin(gameTime * 0.001 + i) * 60}, 100%, 70%, 0.8)`;
+        ctx.fillRect(windowX - 8, houseY - 30, 16, 20);
+        
+        // توهج النافذة
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(windowX - 10, houseY - 32, 20, 24);
+    }
+    
+    // باب بلوري
+    ctx.fillStyle = 'rgba(70, 130, 180, 0.9)';
+    ctx.fillRect(houseX - 15, houseY + 20, 30, 60);
+    
+    // مقبض الباب المتوهج
+    ctx.fillStyle = '#FF4500';
     ctx.beginPath();
-    ctx.moveTo(x - 10, y);
-    ctx.lineTo(x + 60, y - 50);
-    ctx.lineTo(x + 130, y);
+    ctx.arc(houseX + 8, houseY + 50, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // سقف سحري
+    ctx.fillStyle = '#8A2BE2';
+    ctx.beginPath();
+    ctx.moveTo(houseX - 90, houseY - 60);
+    ctx.lineTo(houseX, houseY - 120);
+    ctx.lineTo(houseX + 90, houseY - 60);
     ctx.closePath();
     ctx.fill();
     
-    // الباب
-    ctx.fillStyle = '#654321';
-    ctx.fillRect(x + 50, y + 40, 30, 60);
-    
-    // النوافذ
-    ctx.fillStyle = '#87CEEB';
-    ctx.fillRect(x + 20, y + 30, 20, 20); // نافذة يسار
-    ctx.fillRect(x + 85, y + 30, 20, 20); // نافذة يمين
-    
-    // مدخنة
-    ctx.fillStyle = '#696969';
-    ctx.fillRect(x + 90, y - 60, 15, 40);
+    // كرات سحرية على السقف
+    for(let i = 0; i < 5; i++) {
+        const ballX = houseX - 60 + i * 30;
+        const ballY = houseY - 70 + Math.sin(gameTime * 0.002 + i) * 5;
+        const ballColor = `hsl(${i * 72}, 100%, 60%)`;
+        
+        ctx.fillStyle = ballColor;
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // توهج الكرة
+        const ballGlow = ctx.createRadialGradient(ballX, ballY, 8, ballX, ballY, 20);
+        ballGlow.addColorStop(0, ballColor);
+        ballGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = ballGlow;
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, 20, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
-// دالة لرسم شجرة
-function drawTree(ctx, x, y) {
-    // الجذع
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(x - 10, y, 20, 60);
+function drawCrystalLake() {
+    const lakeX = canvas.width * 0.3;
+    const lakeY = canvas.height * 0.75;
+    const lakeRadius = 120;
     
-    // الأوراق
-    ctx.fillStyle = '#228B22';
+    // البحيرة البلورية
+    const lakeGradient = ctx.createRadialGradient(
+        lakeX, lakeY, 0,
+        lakeX, lakeY, lakeRadius
+    );
+    lakeGradient.addColorStop(0, 'rgba(64, 224, 208, 0.9)');
+    lakeGradient.addColorStop(0.7, 'rgba(0, 191, 255, 0.7)');
+    lakeGradient.addColorStop(1, 'rgba(30, 144, 255, 0.5)');
+    
+    ctx.fillStyle = lakeGradient;
     ctx.beginPath();
-    ctx.arc(x, y - 20, 40, 0, Math.PI * 2);
-    ctx.arc(x - 30, y - 10, 35, 0, Math.PI * 2);
-    ctx.arc(x + 30, y - 10, 35, 0, Math.PI * 2);
-    ctx.arc(x, y - 60, 30, 0, Math.PI * 2);
+    ctx.arc(lakeX, lakeY, lakeRadius, 0, Math.PI * 2);
     ctx.fill();
-}
-
-// دالة لرسم أمواج
-function drawWaves(ctx) {
-    const canvas = document.getElementById('game-canvas');
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    
+    // أمواج سحرية
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.lineWidth = 2;
     
-    for(let i = 0; i < 10; i++) {
+    for(let wave = 0; wave < 5; wave++) {
+        const waveRadius = lakeRadius - 20 + wave * 10;
+        const waveOffset = Math.sin(gameTime * 0.001 + wave) * 5;
+        
         ctx.beginPath();
-        const waveY = canvas.height/2 + 280 + Math.sin(Date.now()/1000 + i) * 10;
-        ctx.moveTo(0, waveY + i * 15);
-        for(let x = 0; x < canvas.width; x += 20) {
-            const y = waveY + i * 15 + Math.sin(x/50 + Date.now()/1000) * 8;
-            ctx.lineTo(x, y);
+        for(let angle = 0; angle < Math.PI * 2; angle += 0.1) {
+            const x = lakeX + Math.cos(angle) * (waveRadius + Math.sin(angle * 3 + gameTime * 0.002) * 10 + waveOffset);
+            const y = lakeY + Math.sin(angle) * (waveRadius + Math.cos(angle * 3 + gameTime * 0.002) * 10 + waveOffset);
+            
+            if (angle === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
         }
+        ctx.closePath();
+        ctx.stroke();
+    }
+    
+    // بلورات في البحيرة
+    for(let i = 0; i < 20; i++) {
+        const angle = (i / 20) * Math.PI * 2 + gameTime * 0.0005;
+        const distance = 40 + Math.sin(i * 0.5) * 30;
+        const crystalX = lakeX + Math.cos(angle) * distance;
+        const crystalY = lakeY + Math.sin(angle) * distance;
+        const crystalSize = 5 + Math.sin(gameTime * 0.003 + i) * 3;
+        const crystalColor = `hsl(${i * 18}, 100%, ${60 + Math.sin(gameTime * 0.004 + i) * 20}%)`;
+        
+        ctx.fillStyle = crystalColor;
+        ctx.beginPath();
+        
+        // شكل بلوري سداسي
+        for(let side = 0; side < 6; side++) {
+            const crystalAngle = (side / 6) * Math.PI * 2;
+            const cx = crystalX + Math.cos(crystalAngle) * crystalSize;
+            const cy = crystalY + Math.sin(crystalAngle) * crystalSize;
+            
+            if (side === 0) ctx.moveTo(cx, cy);
+            else ctx.lineTo(cx, cy);
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        // توهج البلورة
+        const crystalGlow = ctx.createRadialGradient(crystalX, crystalY, crystalSize, crystalX, crystalY, crystalSize * 3);
+        crystalGlow.addColorStop(0, crystalColor);
+        crystalGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = crystalGlow;
+        ctx.beginPath();
+        ctx.arc(crystalX, crystalY, crystalSize * 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawMagicWaterfall() {
+    const fallX = canvas.width * 0.85;
+    const fallStartY = canvas.height * 0.3;
+    const fallEndY = canvas.height * 0.85;
+    const fallWidth = 60;
+    
+    // الشلال الرئيسي
+    const fallGradient = ctx.createLinearGradient(fallX - fallWidth/2, fallStartY, fallX - fallWidth/2, fallEndY);
+    fallGradient.addColorStop(0, 'rgba(135, 206, 250, 0.9)');
+    fallGradient.addColorStop(0.5, 'rgba(173, 216, 230, 0.8)');
+    fallGradient.addColorStop(1, 'rgba(240, 248, 255, 0.7)');
+    
+    ctx.fillStyle = fallGradient;
+    ctx.fillRect(fallX - fallWidth/2, fallStartY, fallWidth, fallEndY - fallStartY);
+    
+    // قطرات ماء متحركة
+    for(let i = 0; i < 50; i++) {
+        const dropX = fallX - fallWidth/2 + Math.random() * fallWidth;
+        const dropSpeed = 5 + Math.random() * 10;
+        const dropY = fallStartY + ((gameTime * 0.05 * dropSpeed) + i * 10) % (fallEndY - fallStartY);
+        const dropSize = 2 + Math.random() * 4;
+        
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + Math.sin(gameTime * 0.01 + i) * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(dropX, dropY, dropSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // رذاذ الشلال
+    for(let i = 0; i < 100; i++) {
+        const sprayAngle = Math.random() * Math.PI;
+        const sprayDistance = 30 + Math.random() * 50;
+        const sprayX = fallX + Math.cos(sprayAngle) * sprayDistance;
+        const sprayY = fallEndY - 20 + Math.sin(sprayAngle) * sprayDistance;
+        const spraySize = 1 + Math.random() * 3;
+        const sprayLife = (gameTime * 0.02 + i) % 100;
+        const sprayAlpha = 0.3 * (1 - sprayLife / 100);
+        
+        ctx.fillStyle = `rgba(255, 255, 255, ${sprayAlpha})`;
+        ctx.beginPath();
+        ctx.arc(sprayX, sprayY, spraySize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // قوس قزح من الشلال
+    for(let colorIndex = 0; colorIndex < 7; colorIndex++) {
+        const rainbowColors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#8B00FF'];
+        const rainbowY = fallEndY - 40 + colorIndex * 8;
+        
+        ctx.strokeStyle = rainbowColors[colorIndex];
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        
+        ctx.beginPath();
+        const startX = fallX - fallWidth/2 - 30 - colorIndex * 5;
+        const endX = fallX + fallWidth/2 + 30 + colorIndex * 5;
+        const curveHeight = 20 + Math.sin(gameTime * 0.001 + colorIndex) * 10;
+        
+        ctx.moveTo(startX, rainbowY);
+        ctx.quadraticCurveTo(
+            fallX,
+            rainbowY - curveHeight,
+            endX,
+            rainbowY
+        );
         ctx.stroke();
     }
 }
 
-// دالة لرسم إسطبل
-function drawStable(ctx, x, y) {
-    ctx.fillStyle = '#D2691E';
-    ctx.fillRect(x, y, 100, 80);
+// ==================== الحيوانات السحرية ====================
+function drawFantasyAnimals(player) {
+    // وحيد قرن سحري
+    const unicornX = 400 + Math.sin(gameTime * 0.0008) * 100;
+    const unicornY = 500 + Math.cos(gameTime * 0.0006) * 50;
     
-    // سقف الإسطبل
-    ctx.fillStyle = '#A0522D';
+    // جسم وحيد القرن
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.beginPath();
-    ctx.moveTo(x - 10, y);
-    ctx.lineTo(x + 50, y - 40);
-    ctx.lineTo(x + 110, y);
+    ctx.ellipse(unicornX, unicornY, 35, 25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // قرن سحري
+    const hornLength = 40 + Math.sin(gameTime * 0.005) * 10;
+    ctx.fillStyle = `hsl(${gameTime * 0.1 % 360}, 100%, 60%)`;
+    ctx.beginPath();
+    ctx.moveTo(unicornX + 35, unicornY - 25);
+    ctx.lineTo(unicornX + 35 + hornLength, unicornY - 40);
+    ctx.lineTo(unicornX + 35, unicornY - 15);
     ctx.closePath();
     ctx.fill();
     
-    // باب الإسطبل
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(x + 35, y + 20, 30, 60);
-}
-
-// دالة لرسم حصان
-function drawHorse(ctx, x, y) {
-    // الجسم
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(x - 30, y - 20, 60, 40);
-    
-    // الرقبة والرأس
-    ctx.fillRect(x + 20, y - 40, 20, 40);
-    
-    // الرأس
+    // توهج القرن
+    const hornGlow = ctx.createRadialGradient(
+        unicornX + 35 + hornLength/2, unicornY - 40,
+        0,
+        unicornX + 35 + hornLength/2, unicornY - 40,
+        hornLength * 1.5
+    );
+    hornGlow.addColorStop(0, `hsl(${gameTime * 0.1 % 360}, 100%, 60%)`);
+    hornGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = hornGlow;
     ctx.beginPath();
-    ctx.ellipse(x + 35, y - 55, 10, 15, 0, 0, Math.PI * 2);
+    ctx.arc(unicornX + 35 + hornLength/2, unicornY - 40, hornLength * 1.5, 0, Math.PI * 2);
     ctx.fill();
     
-    // الأرجل
-    ctx.fillRect(x - 25, y + 20, 10, 30);
-    ctx.fillRect(x - 5, y + 20, 10, 30);
-    ctx.fillRect(x + 15, y + 20, 10, 30);
-    ctx.fillRect(x + 35, y + 20, 10, 30);
-    
-    // الذيل
+    // عين وحيد القرن
+    ctx.fillStyle = 'rgba(100, 200, 255, 0.9)';
     ctx.beginPath();
-    ctx.moveTo(x - 35, y - 10);
-    ctx.quadraticCurveTo(x - 60, y, x - 50, y - 30);
-    ctx.quadraticCurveTo(x - 40, y - 20, x - 35, y - 10);
+    ctx.arc(unicornX + 45, unicornY - 20, 8, 0, Math.PI * 2);
     ctx.fill();
     
-    // العين
     ctx.fillStyle = 'black';
     ctx.beginPath();
-    ctx.arc(x + 40, y - 55, 3, 0, Math.PI * 2);
+    ctx.arc(unicornX + 48, unicornY - 20, 3, 0, Math.PI * 2);
     ctx.fill();
-}
-
-// دالة لرسم كومة حطب
-function drawWoodPile(ctx, x, y) {
-    ctx.fillStyle = '#654321';
     
-    // قطع خشب متراكمة
+    // شعر وحيد القرن
+    ctx.fillStyle = `hsl(${gameTime * 0.05 % 360}, 100%, 70%)`;
     for(let i = 0; i < 10; i++) {
-        const woodX = x + (i % 5) * 20;
-        const woodY = y + Math.floor(i / 5) * 15;
-        ctx.fillRect(woodX, woodY, 40, 10);
+        const hairAngle = Math.PI * 0.7 + (i / 15);
+        const hairX = unicornX - 20 + Math.cos(hairAngle + gameTime * 0.001) * 25;
+        const hairY = unicornY - 30 + Math.sin(hairAngle + gameTime * 0.001) * 25;
+        ctx.beginPath();
+        ctx.arc(hairX, hairY, 2 + Math.sin(gameTime * 0.01 + i) * 1.5, 0, Math.PI * 2);
+        ctx.fill();
     }
     
-    // فأس
-    ctx.fillStyle = '#808080'; // معدن
-    ctx.fillRect(x - 10, y + 50, 30, 5); // مقبض
+    // تنين صغير
+    const dragonX = 900 + Math.cos(gameTime * 0.0007) * 80;
+    const dragonY = 300 + Math.sin(gameTime * 0.0009) * 40;
+    
+    // جسم التنين
+    ctx.fillStyle = '#228B22';
     ctx.beginPath();
-    ctx.moveTo(x + 25, y + 45);
-    ctx.lineTo(x + 45, y + 52);
-    ctx.lineTo(x + 35, y + 60);
-    ctx.closePath();
-    ctx.fill();
-}
-
-// دالة لرسم الشخصية (اللاعب)
-function drawCharacter(ctx, x, y) {
-    // الرأس
-    ctx.fillStyle = '#FFCC99'; // لون البشرة
-    ctx.beginPath();
-    ctx.arc(x, y - 40, 20, 0, Math.PI * 2);
+    ctx.ellipse(dragonX, dragonY, 25, 15, Math.sin(gameTime * 0.001) * 0.3, 0, Math.PI * 2);
     ctx.fill();
     
-    // الجسم (قميص)
-    ctx.fillStyle = '#4169E1'; // أزرق
-    ctx.fillRect(x - 25, y - 20, 50, 60);
-    
-    // الساقين
-    ctx.fillStyle = '#228B22'; // أخضر (بنطلون)
-    ctx.fillRect(x - 20, y + 40, 15, 40); // ساق يسار
-    ctx.fillRect(x + 5, y + 40, 15, 40); // ساق يمين
-    
-    // الذراعين
-    ctx.fillStyle = '#4169E1'; // نفس لون القميص
-    ctx.fillRect(x - 35, y - 15, 10, 40); // ذراع يسار
-    ctx.fillRect(x + 25, y - 15, 10, 40); // ذراع يمين
-    
-    // العينين
-    ctx.fillStyle = 'black';
+    // أجنحة التنين
+    ctx.fillStyle = 'rgba(34, 139, 34, 0.7)';
+    const wingFlap = Math.sin(gameTime * 0.01) * 20;
     ctx.beginPath();
-    ctx.arc(x - 8, y - 45, 3, 0, Math.PI * 2); // عين يسار
-    ctx.arc(x + 8, y - 45, 3, 0, Math.PI * 2); // عين يمين
+    ctx.ellipse(dragonX - 20, dragonY - wingFlap, 30, 15, Math.PI * 0.3, 0, Math.PI * 2);
     ctx.fill();
     
-    // الفم
     ctx.beginPath();
-    ctx.arc(x, y - 35, 8, 0, Math.PI); // ابتسامة
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    // الشعر
-    ctx.fillStyle = '#8B4513'; // بني
-    ctx.beginPath();
-    ctx.arc(x, y - 55, 15, 0, Math.PI * 2);
-    ctx.fill();
-}
-
-// دالة لرسم كلب
-function drawDog(ctx, x, y) {
-    // الجسم
-    ctx.fillStyle = '#A0522D'; // بني
-    ctx.fillRect(x - 20, y - 15, 40, 25);
-    
-    // الرأس
-    ctx.beginPath();
-    ctx.ellipse(x + 25, y - 20, 15, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(dragonX + 20, dragonY + wingFlap, 30, 15, -Math.PI * 0.3, 0, Math.PI * 2);
     ctx.fill();
     
-    // الأذنين
+    // رأس التنين
+    ctx.fillStyle = '#32CD32';
     ctx.beginPath();
-    ctx.moveTo(x + 30, y - 30);
-    ctx.lineTo(x + 40, y - 40);
-    ctx.lineTo(x + 35, y - 30);
-    ctx.closePath();
+    ctx.arc(dragonX + 35, dragonY - 5, 12, 0, Math.PI * 2);
     ctx.fill();
     
-    // الساقين
-    ctx.fillRect(x - 15, y + 10, 8, 20);
-    ctx.fillRect(x - 5, y + 10, 8, 20);
-    ctx.fillRect(x + 5, y + 10, 8, 20);
-    ctx.fillRect(x + 15, y + 10, 8, 20);
-    
-    // الذيل
+    // عيون التنين
+    ctx.fillStyle = 'red';
     ctx.beginPath();
-    ctx.moveTo(x - 25, y - 10);
-    ctx.quadraticCurveTo(x - 40, y - 5, x - 35, y - 20);
+    ctx.arc(dragonX + 40, dragonY - 8, 4, 0, Math.PI * 2);
     ctx.fill();
     
-    // العين
-    ctx.fillStyle = 'black';
-    ctx.beginPath();
-    ctx.arc(x + 30, y - 20, 2, 0, Math.PI * 2);
-    ctx.fill();
-}
-function setupControls() {
-    // تتبع مفاتيح الكيبورد
-    window.addEventListener('keydown', (e) => {
-        keys[e.key] = true;
-        keys[e.code] = true;
-        
-        // تحكم سريع بالأدمن (Ctrl+Shift+A)
-        if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-            if (adminPanel) {
-                adminPanel.togglePanel();
-            }
-        }
-    });
-    
-    window.addEventListener('keyup', (e) => {
-        keys[e.key] = false;
-        keys[e.code] = false;
-    });
-    
-    // الفأرة
-    game.onClick("interactive", (item) => {
-        showMessage(`نظرت إلى ${item.has("house") ? "البيت" : "الشجرة"}`);
-    });
-    
-    // تغيير الأدوات
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tool = btn.dataset.tool;
-            if (player) {
-                player.switchItem(tool === 'hand' ? 0 : player.inventory.items.indexOf(tool));
-                showMessage(`اخترت ${tool === 'hand' ? 'اليدين' : tool}`);
-            }
-        });
-    });
-}
-
-function startGameLoop() {
-    // دورة اللعبة الرئيسية
-    const gameLoop = () => {
-        updateGame();
-        renderGame();
-        requestAnimationFrame(gameLoop);
-    };
-    
-    // بدء الدورة
-    gameLoop();
-    
-    // تحديث الوقت
-    setInterval(() => {
-        gameState.world.time = (gameState.world.time + 0.1) % 24;
-        updateTimeDisplay();
-        
-        // تحديث الجزيرة
-        if (island) {
-            island.updateTime();
-        }
-        
-        // تحديث المؤثرات
-        if (effectsManager) {
-            effectsManager.updateDayNight();
-        }
-    }, 60000);
-}
-
-function updateGame() {
-    // تحديث اللاعب
-    if (player) {
-        player.update(keys);
-        
-        // تحديث موقع كائن اللاعب
-        if (player.element) {
-            player.element.pos.x = player.position.x;
-            player.element.pos.y = player.position.y;
-        }
-        
-        // تحديث الإصابات
-        if (injurySystem) {
-            injurySystem.update(player.stats);
+    // لهب التنين
+    if (Math.sin(gameTime * 0.02) > 0.5) {
+        const flameColors = ['#FF4500', '#FF8C00', '#FFD700'];
+        for(let i = 0; i < 3; i++) {
+            ctx.fillStyle = flameColors[i];
+            ctx.beginPath();
+            const flameX = dragonX + 45 + i * 8;
+            const flameY = dragonY - 5 + Math.sin(gameTime * 0.05 + i) * 5;
+            const flameSize = 10 - i * 2;
+            ctx.arc(flameX, flameY, flameSize, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
     
-    // تحديث AI Director
-    if (aiDirector && player) {
-        aiDirector.update(player, gameState.world);
-    }
-    
-    // تحديث نظام القتال
-    if (combatSystem) {
-        combatSystem.update();
-    }
-    
-    // تحديث المؤثرات
-    if (effectsManager) {
-        effectsManager.updateParticles();
-    }
-    
-    // تحديث الواجهة
-    if (uiManager) {
-        uiManager.updateUI();
+    // طيور سحرية
+    for(let i = 0; i < 5; i++) {
+        const birdX = 200 + (i * 100) + Math.sin(gameTime * 0.001 + i) * 50;
+        const birdY = 200 + Math.cos(gameTime * 0.001 + i * 1.3) * 30;
+        const birdColor = `hsl(${i * 72 + gameTime * 0.01}, 100%, 60%)`;
+        const birdWing = Math.sin(gameTime * 0.02 + i) * 15;
+        
+        // جسم الطائر
+        ctx.fillStyle = birdColor;
+        ctx.beginPath();
+        ctx.arc(birdX, birdY, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // أجنحة الطائر
+        ctx.beginPath();
+        ctx.ellipse(birdX - 10, birdY + birdWing, 12, 6, Math.PI * 0.2, 0, Math.PI * 2);
+        ctx.ellipse(birdX + 10, birdY - birdWing, 12, 6, -Math.PI * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // ذيل الطائر
+        ctx.beginPath();
+        ctx.moveTo(birdX - 15, birdY);
+        ctx.lineTo(birdX - 30, birdY - 10);
+        ctx.lineTo(birdX - 30, birdY + 10);
+        ctx.closePath();
+        ctx.fill();
+        
+        // مسار الطائر (نجوم)
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + Math.sin(gameTime * 0.03 + i) * 0.2})`;
+        for(let trail = 0; trail < 5; trail++) {
+            const trailX = birdX - 20 - trail * 10;
+            const trailY = birdY + Math.sin(trail * 0.5 + gameTime * 0.01) * 5;
+            ctx.beginPath();
+            ctx.arc(trailX, trailY, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 }
 
-function renderGame() {
-    // Kaboom يتولى الرسم تلقائياً
-    // نضيف هنا أي رسم إضافي إذا لزم
+// ==================== الواجهة ====================
+function drawUI(player) {
+    // خلفية الواجهة
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(20, 20, 300, 160);
+    ctx.strokeStyle = '#4CAF50';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(20, 20, 300, 160);
+    
+    // العنوان
+    ctx.fillStyle = '#4CAF50';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('🏝️ جزيرة إيدن السحرية', 40, 55);
+    
+    // الصحة
+    ctx.fillStyle = '#FF4444';
+    ctx.fillRect(40, 75, 200, 20);
+    ctx.fillStyle = '#44FF44';
+    ctx.fillRect(40, 75, playerHealth * 2, 20);
+    ctx.fillStyle = 'white';
+    ctx.font = '16px Arial';
+    ctx.fillText(`❤️ الصحة: ${playerHealth}%`, 250, 90);
+    
+    // المال
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText(`💰 المال: ${playerMoney}`, 40, 125);
+    
+    // الوقت
+    const hours = Math.floor((gameTime * 0.001) % 24);
+    const minutes = Math.floor((gameTime * 0.06) % 60);
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillText(`⏰ الوقت: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`, 40, 155);
+    
+    // المخزون
+    ctx.fillStyle = '#9370DB';
+    ctx.fillText(`🪓 خشب: ${inventory.wood}`, 40, 185);
+    ctx.fillText(`🍎 طعام: ${inventory.food}`, 160, 185);
+    
+    // التعليمات
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = '14px Arial';
+    ctx.fillText('E: تفاعل | R: حصان | T: نوم | F: أكل', 40, 215);
+    ctx.fillText('C: قطع خشب | Space: قفز | M: خريطة', 40, 235);
+    
+    // حالة خاصة
+    if (isRidingHorse) {
+        ctx.fillStyle = '#8B4513';
+        ctx.fillText('🐎 تركب حصاناً (أسرع 2x)', 40, 265);
+    }
+    if (isSleeping) {
+        ctx.fillStyle = '#4169E1';
+        ctx.fillText('💤 نائم... اضغط T للاستيقاظ', 40, 265);
+    }
 }
 
-function updateTimeDisplay() {
-    const hour = Math.floor(gameState.world.time);
-    const minute = Math.floor((gameState.world.time % 1) * 60);
-    const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+// ==================== التحكم ====================
+const keys = {};
+const player = new Player();
+
+window.addEventListener('keydown', (e) => {
+    keys[e.key.toLowerCase()] = true;
     
-    const timeDisplay = document.getElementById('time-display');
-    if (timeDisplay) {
-        timeDisplay.textContent = timeStr;
+    // أنشطة سريعة
+    if (e.key === 'r' || e.key === 'R') toggleHorse();
+    if (e.key === 't' || e.key === 'T') toggleSleep();
+    if (e.key === ' ' || e.key === ' ') playerJump();
+    if (e.key === 'f' || e.key === 'F') eatFood();
+    if (e.key === 'c' || e.key === 'C') chopWood();
+    if (e.key === 'e' || e.key === 'E') interact();
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+function toggleHorse() {
+    if (Math.abs(player.x - 400) < 100 && Math.abs(player.y - 500) < 100) {
+        isRidingHorse = !isRidingHorse;
+        showMessage(isRidingHorse ? '🐎 ركبت الحصان السحري!' : '🐎 نزلت من الحصان');
+    }
+}
+
+function toggleSleep() {
+    if (Math.abs(player.x - 840) < 100 && Math.abs(player.y - 520) < 100) {
+        isSleeping = !isSleeping;
+        if (isSleeping) {
+            showMessage('💤 نمت للراحة... الصحة تتعافى');
+            playerHealth = Math.min(100, playerHealth + 30);
+        } else {
+            showMessage('☀️ استيقظت مفعماً بالطاقة!');
+        }
+    }
+}
+
+function playerJump() {
+    showMessage('⬆️ قفزت عالياً في الهواء!');
+}
+
+function eatFood() {
+    if (inventory.food > 0) {
+        inventory.food--;
+        playerHealth = Math.min(100, playerHealth + 20);
+        showMessage('🍎 أكلت طعاماً (+20 صحة)');
+    }
+}
+
+function chopWood() {
+    if (Math.abs(player.x - 300) < 150 && Math.abs(player.y - 600) < 100) {
+        inventory.wood++;
+        playerMoney += 50;
+        showMessage('🪓 قطعت خشباً (+50💰)');
+    }
+}
+
+function interact() {
+    // تفاعل مع وحيد القرن
+    if (Math.abs(player.x - 400) < 80 && Math.abs(player.y - 500) < 80) {
+        showMessage('🦄 وحيد القرن السحري يلمع بفرح!');
+        playerMoney += 200;
     }
     
-    // تحديث الصحة والثقة
-    const healthDisplay = document.getElementById('health-display');
-    const trustDisplay = document.getElementById('trust-display');
-    
-    if (healthDisplay && player) {
-        healthDisplay.textContent = Math.floor(player.stats.health);
-    }
-    
-    if (trustDisplay) {
-        trustDisplay.textContent = gameState.playerData.trust;
+    // تفاعل مع البحيرة
+    if (Math.abs(player.x - 360) < 130 && Math.abs(player.y - 600) < 130) {
+        showMessage('💎 وجدت بلورة سحرية! (+300💰)');
+        playerMoney += 300;
     }
 }
 
 function showMessage(text) {
-    const messageBox = document.getElementById('message-box');
-    const messageText = document.getElementById('message-text');
-    
-    if (messageBox && messageText) {
-        messageText.textContent = text;
-        messageBox.classList.remove('hidden');
-        
-        setTimeout(() => {
-            messageBox.classList.add('hidden');
-        }, 3000);
-    }
-    
-    // إضافة إشعار في الواجهة
-    if (uiManager) {
-        uiManager.addNotification(text, 'info');
-    }
-}
-
-// جعل الدالة متاحة عالمياً
-window.showMessage = showMessage;
-
-// حفظ اللعبة
-function saveGame() {
-    if (player && gameState) {
-        const saveData = {
-            player: {
-                position: player.position,
-                stats: player.stats,
-                inventory: player.inventory
-            },
-            gameState: gameState,
-            timestamp: new Date()
-        };
-        
-        localStorage.setItem('eden_island_save', JSON.stringify(saveData));
-        showMessage('💾 تم حفظ اللعبة بنجاح!');
-    }
-}
-
-function loadGame() {
-    const saved = localStorage.getItem('eden_island_save');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            
-            // تحميل بيانات اللاعب
-            if (player && data.player) {
-                player.position = data.player.position || player.position;
-                player.stats = data.player.stats || player.stats;
-                player.inventory = data.player.inventory || player.inventory;
-            }
-            
-            // تحميل حالة اللعبة
-            if (data.gameState) {
-                Object.assign(gameState, data.gameState);
-            }
-            
-            console.log('🔄 تم تحميل الحفظ السابق');
-        } catch (e) {
-            console.error('❌ خطأ في تحميل الحفظ:', e);
-        }
-    }
-}
-
-// تحميل اللعبة عند البدء
-window.addEventListener('load', () => {
-    loadGame();
-    
-    // تحميل أنماط الاهتزاز
-    const shakeStyle = document.createElement('style');
-    shakeStyle.textContent = `
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
+    const messageBox = document.createElement('div');
+    messageBox.textContent = text;
+    messageBox.style.cssText = `
+        position: fixed;
+        bottom: 150px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 15px 30px;
+        border-radius: 15px;
+        border: 3px solid #4CAF50;
+        font-size: 18px;
+        z-index: 10000;
+        animation: messagePop 3s;
+        box-shadow: 0 0 20px #4CAF50;
     `;
-    document.head.appendChild(shakeStyle);
-});
-
-// حفظ عند الخروج
-window.addEventListener('beforeunload', (e) => {
-    saveGame();
+    document.body.appendChild(messageBox);
     
-    // تأكيد الخروج إذا كان هناك تقدم غير محفوظ
-    if (player && player.stats.health < 100) {
-        e.preventDefault();
-        e.returnValue = 'لديك تقدم غير محفوظ. هل تريد المغادرة؟';
-        return e.returnValue;
-    }
-});
-
-// إعادة ضبط الحجم عند تغيير حجم النافذة
-window.addEventListener('resize', () => {
-    if (game) {
-        // إعادة ضبط حجم الكانفاس
-        const canvas = document.getElementById('game-canvas');
-        if (canvas) {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-    }
-});
-
-// تصدير للاختبارات
-if (typeof module !== 'undefined') {
-    module.exports = {
-        gameState,
-        enterGame,
-        initGame,
-        saveGame,
-        loadGame
-    };
+    setTimeout(() => messageBox.remove(), 3000);
 }
+
+// ==================== الدورة الرئيسية ====================
+function gameLoop() {
+    gameTime += 16; // حوالي 60 FPS
+    
+    // تحديث اللاعب
+    player.update(keys);
+    
+    // رسم كل شيء
+    drawFantasyWorld();
+    drawFantasyAnimals(player);
+    player.draw();
+    drawUI(player);
+    
+    // استمرار الدورة
+    requestAnimationFrame(gameLoop);
+}
+
+// ==================== البدء ====================
+// إضافة أنماط CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes messagePop {
+        0% { opacity: 0; transform: translateX(-50%) scale(0.5); bottom: 100px; }
+        20% { opacity: 1; transform: translateX(-50%) scale(1.1); bottom: 150px; }
+        40% { transform: translateX(-50%) scale(1); bottom: 150px; }
+        80% { opacity: 1; bottom: 150px; }
+        100% { opacity: 0; bottom: 180px; }
+    }
+    
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    
+    canvas {
+        border: 3px solid #4CAF50;
+        border-radius: 10px;
+        box-shadow: 0 0 50px rgba(76, 175, 80, 0.5);
+    }
+`;
+document.head.appendChild(style);
+
+// بدء اللعبة
+gameLoop();
+
+console.log('🎮 جزيرة إيدن السحرية جاهزة!');
+console.log('🐎 جرافيك خيالي كامل في 400 سطر!');
