@@ -958,3 +958,232 @@ gameLoop();
 
 console.log('🎮 جزيرة إيدن السحرية جاهزة!');
 console.log('🐎 جرافيك خيالي كامل في 400 سطر!');
+// ==================== نظام الدخول المضمون ====================
+function setupLoginSystem() {
+    console.log('🔐 تهيئة نظام الدخول...');
+    
+    // تأكد من وجود العناصر
+    const loginScreen = document.getElementById('login-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const passwordInput = document.getElementById('password');
+    const enterBtn = document.getElementById('enter-btn');
+    
+    if (!loginScreen || !gameScreen || !passwordInput || !enterBtn) {
+        console.error('❌ عناصر HTML مفقودة!');
+        
+        // إنشاء العناصر إذا لم تكن موجودة
+        createLoginElements();
+        return;
+    }
+    
+    // كلمة السر الصحيحة
+    const CORRECT_PASSWORD = 'بداية';
+    
+    // حدث زر الدخول
+    enterBtn.addEventListener('click', function() {
+        const enteredPassword = passwordInput.value.trim();
+        
+        if (enteredPassword === CORRECT_PASSWORD) {
+            console.log('✅ كلمة السر صحيحة! دخول إلى اللعبة...');
+            
+            // تأثير انتقال
+            loginScreen.style.opacity = '0';
+            loginScreen.style.transition = 'opacity 0.5s';
+            
+            setTimeout(() => {
+                loginScreen.style.display = 'none';
+                gameScreen.style.display = 'block';
+                
+                // بدء اللعبة
+                if (typeof startGame === 'function') {
+                    startGame();
+                } else {
+                    console.log('🎮 بدء اللعبة الافتراضية...');
+                    // بدء اللعبة هنا
+                }
+            }, 500);
+            
+        } else {
+            console.log('❌ كلمة السر خاطئة');
+            
+            // تأثير خطأ
+            passwordInput.style.border = '2px solid red';
+            passwordInput.style.animation = 'shake 0.5s';
+            
+            // رسالة خطأ
+            showLoginError('كلمة السر خاطئة! جرب: "بداية"');
+            
+            setTimeout(() => {
+                passwordInput.style.border = '';
+                passwordInput.style.animation = '';
+            }, 500);
+        }
+    });
+    
+    // أيضاً عند ضغط Enter في حقل الكتابة
+    passwordInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            enterBtn.click();
+        }
+    });
+    
+    console.log('✅ نظام الدخول جاهز');
+}
+
+// عرض رسالة خطأ
+function showLoginError(message) {
+    // إزالة أي رسائل سابقة
+    const oldError = document.getElementById('login-error');
+    if (oldError) oldError.remove();
+    
+    // إنشاء رسالة جديدة
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'login-error';
+    errorDiv.textContent = message;
+    errorDiv.style.cssText = `
+        color: #ff4444;
+        margin-top: 10px;
+        padding: 8px;
+        background: rgba(255, 0, 0, 0.1);
+        border-radius: 5px;
+        animation: fadeIn 0.3s;
+    `;
+    
+    const container = document.querySelector('.login-container');
+    if (container) {
+        container.appendChild(errorDiv);
+    }
+    
+    // إزالة الرسالة بعد 3 ثوان
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.style.opacity = '0';
+            errorDiv.style.transition = 'opacity 0.5s';
+            setTimeout(() => errorDiv.remove(), 500);
+        }
+    }, 3000);
+}
+
+// إنشاء عناصر الدخول إذا لم تكن موجودة
+function createLoginElements() {
+    console.log('🛠️ إنشاء عناصر الدخول...');
+    
+    const html = `
+        <div id="login-screen" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a1929, #1a472a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+        ">
+            <div class="login-container" style="
+                background: rgba(0, 0, 0, 0.8);
+                padding: 40px;
+                border-radius: 20px;
+                border: 3px solid #4CAF50;
+                text-align: center;
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 0 50px rgba(76, 175, 80, 0.5);
+            ">
+                <h1 style="color: #4CAF50; margin-bottom: 10px;">🏝️ جزيرة إيدن</h1>
+                <p style="color: #aaa; margin-bottom: 30px;">العالم السحري ينتظرك</p>
+                
+                <input type="password" id="password" placeholder="أدخل كلمة السر..." style="
+                    width: 100%;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    border: 2px solid #4CAF50;
+                    border-radius: 10px;
+                    background: rgba(255, 255, 255, 0.1);
+                    color: white;
+                    font-size: 16px;
+                    text-align: center;
+                ">
+                
+                <button id="enter-btn" style="
+                    width: 100%;
+                    padding: 15px;
+                    background: linear-gradient(45deg, #4CAF50, #45a049);
+                    border: none;
+                    border-radius: 10px;
+                    color: white;
+                    font-size: 18px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                " onmouseover="this.style.transform='scale(1.05)'" 
+                   onmouseout="this.style.transform='scale(1)'">
+                    🚀 دخول إلى الجزيرة
+                </button>
+                
+                <p style="color: #888; margin-top: 20px; font-size: 14px;">
+                    كلمة السر: <strong style="color: #4CAF50">"بداية"</strong>
+                </p>
+            </div>
+        </div>
+        
+        <div id="game-screen" style="display: none;">
+            <canvas id="game-canvas" width="1200" height="800"></canvas>
+        </div>
+    `;
+    
+    // إضافة الأنماط
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // إضافة HTML إلى body
+    document.body.innerHTML = html + document.body.innerHTML;
+    
+    console.log('✅ عناصر الدخول مخلوقة');
+}
+
+// دالة بدء اللعبة
+function startGame() {
+    console.log('🎮 بدء اللعبة...');
+    
+    // هنا ضع كود اللعبة الرئيسي
+    // أو استدع الدوال الأخرى
+    
+    // مثال: بدء دورة اللعبة
+    if (typeof gameLoop === 'function') {
+        gameLoop();
+    }
+}
+
+// تشغيل نظام الدخول عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 الصفحة محملة');
+    setupLoginSystem();
+});
+
+// أيضاً عند اكتمال تحميل الصفحة
+window.addEventListener('load', function() {
+    console.log('🚀 الصفحة جاهزة');
+    
+    // إضافة مؤشر تحميل إذا لزم
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        setTimeout(() => {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => loadingScreen.remove(), 500);
+        }, 1000);
+    }
+});
